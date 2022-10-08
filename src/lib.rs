@@ -181,12 +181,6 @@ macro_rules! shooby_db {
     }
 
 #[derive(Debug)]
-enum Persistency {
-    Persistent,
-    NotPersistent,
-}
-
-#[derive(Debug)]
 enum CfgType<'a> {
     Bool(bool),
     Int(i32),
@@ -194,6 +188,8 @@ enum CfgType<'a> {
     Blob(&'a mut [u8]),
 }
 
+const PERSISTENT: bool = true;
+const NON_PERSISTENT: bool = false;
 /// ShoobyDbField
 /// This is the fields that are held for each item in the database
 #[derive(Debug)]
@@ -201,7 +197,7 @@ pub struct ShoobyDbField {
     name: &'static str,
     data: CfgType<'static>,
     range: Option<(i32, i32)>,
-    persistent: Persistency,
+    persistent: bool,
     has_changed: bool,
 }
 
@@ -312,10 +308,10 @@ struct A {
 }
 
 shooby_db!(TESTER =>
-    {FOO, Int, 15, Some((10, 20)), Persistency::NotPersistent},
-    {FAR, String, "default Something", 24, Persistency::NotPersistent},
-    {FAZ, Bool, false, None, Persistency::NotPersistent},
-    {FOODDB, Blob, A {a: 5, b: 9} , std::mem::size_of::<A>(), Persistency::NotPersistent},
+    {FOO, Int, 15, Some((10, 20)), NON_PERSISTENT},
+    {FAR, String, "default Something", 24, NON_PERSISTENT},
+    {FAZ, Bool, false, None, PERSISTENT},
+    {FOODDB, Blob, A {a: 5, b: 9} , std::mem::size_of::<A>(), PERSISTENT},
 );
 
 #[cfg(test)]
