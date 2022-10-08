@@ -125,7 +125,7 @@ macro_rules! shooby_db {
             }
 
             impl DB {
-                pub fn take_and_init(/*reset or load from memory*/) -> Self {
+                pub fn take(/*TODO: reset or load from memory*/) -> Self {
 
                     // make sure we call this function only one time!
                     // TODO: this works only if we have atomic bool, which maybe in no_std is not possible - check it
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut db = TESTER::DB::take_and_init();
+        let mut db = TESTER::DB::take();
         {
             let reader = db.reader();
             println!("number in FOO: {}", reader[TESTER::ID::FOO].get_number());
