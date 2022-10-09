@@ -8,6 +8,7 @@ mod shooby_db_macro;
 pub(crate) use shooby_field::*;
 
 #[derive(Debug, Copy, Clone)]
+#[repr(packed)]
 struct A {
     a: u32,
     b: u32,
@@ -16,6 +17,7 @@ struct A {
 
 #[cfg(test)]
 mod tests {
+    #![allow(unaligned_references)]
     use super::*;
 
     macro_rules! create_db_instance {
