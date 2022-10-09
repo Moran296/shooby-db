@@ -15,15 +15,14 @@ struct A {
     b: u32,
 }
 
-
 #[cfg(test)]
 mod tests {
     #![allow(unaligned_references)]
     use super::*;
 
     macro_rules! create_db_instance {
-        () => {
-            shooby_db!(TESTER =>
+        ($name:ident) => {
+            shooby_db!($name =>
                 {NUM, Int, 15, Some((10, 100)), NON_PERSISTENT},
                 {STRING, String, "default", 24, NON_PERSISTENT},
                 {BOOLEAN, Bool, false, None, PERSISTENT},
@@ -34,29 +33,26 @@ mod tests {
 
     #[test]
     fn it_works() {
-
-        create_db_instance!();
+        create_db_instance!(TESTER);
         let db = TESTER::DB::take();
-            let reader = db.reader();
-            assert_eq!(reader[TESTER::ID::NUM].get_number(), 15);
-            assert_eq!(reader[TESTER::ID::STRING].get_string(), "default");
-            assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), false);
-            assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 5);
-            assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().b, 9);
+        let reader = db.reader();
+        assert_eq!(reader[TESTER::ID::NUM].get_number(), 15);
+        assert_eq!(reader[TESTER::ID::STRING].get_string(), "default");
+        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), false);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 5);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().b, 9);
     }
 
     #[test]
     fn can_be_changed() {
-
-        create_db_instance!();
+        create_db_instance!(TESTER);
         let mut db = TESTER::DB::take();
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM ].set_number(17);
-            writer[TESTER::ID::STRING ].set_string("I LOVE JENNY");
-            writer[TESTER::ID::BOOLEAN ].set_bool(true);
-            writer[TESTER::ID::BLOB ].set_blob(&A{a: 80, b: 90});
-
+            writer[TESTER::ID::NUM].set_number(17);
+            writer[TESTER::ID::STRING].set_string("I LOVE JENNY");
+            writer[TESTER::ID::BOOLEAN].set_bool(true);
+            writer[TESTER::ID::BLOB].set_blob(&A { a: 80, b: 90 });
         });
 
         let reader = db.reader();
@@ -66,5 +62,4 @@ mod tests {
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 80);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().b, 90);
     }
-
 }
