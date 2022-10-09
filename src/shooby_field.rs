@@ -6,7 +6,6 @@ use crate::utils::*;
 pub(crate) enum ShoobyFieldType<'a> {
     Bool(bool),
     Int(i32),
-    UInt(u32),
     String(&'a mut [u8]),
     Blob(&'a mut [u8]),
 }
@@ -42,35 +41,18 @@ impl ShoobyField {
     }
 
     //======================SETTERS======================
-    pub fn set_int<T: Into<i32>>(&mut self, new_val: T) -> i32 {
-        let value: i32 = new_val.into();
+    pub fn set_int<T: TryInto<i32>>(&mut self, new_val: T) -> i32 {
+        let value: i32 = new_val.try_into().unwrap_or_else(|_| {
+                panic!(
+                    "value is out of range for type {}",
+                    std::any::type_name::<T>()
+                )
+            });
         if let ShoobyFieldType::Int(ref mut data) = self.data {
             let old_value = *data;
             if let Some((min, max)) = self.range {
                 if value < min || value > max {
                     println!("value {} is out of bounds range {} - {}", value, min, max);
-                    return old_value;
-                }
-            }
-
-            if *data != value {
-                *data = value;
-                self.has_changed = true;
-            }
-            old_value
-        } else {
-            panic!("{} type is not int!", self.name);
-        }
-    }
-
-    pub fn set_uint<T: Into<u32>>(&mut self, new_val: T) -> u32 {
-        let value: u32 = new_val.into();
-
-        if let ShoobyFieldType::UInt(ref mut data) = self.data {
-            let old_value = *data;
-            if let Some((min, max)) = self.range {
-                if value < min as u32 || value > max as u32 {
-                    println!("value {} is out of range {} - {}", value, min, max);
                     return old_value;
                 }
             }
@@ -128,20 +110,6 @@ impl ShoobyField {
 
     pub fn get_int<T: TryFrom<i32>>(&self) -> T {
         if let ShoobyFieldType::Int(val) = self.data {
-            val.try_into().unwrap_or_else(|_| {
-                panic!(
-                    "value {} is out of range for type {}",
-                    val,
-                    std::any::type_name::<T>()
-                )
-            })
-        } else {
-            panic!("{} type is not int!", self.name);
-        }
-    }
-
-    pub fn get_uint<T: TryFrom<u32>>(&self) -> T {
-        if let ShoobyFieldType::UInt(val) = self.data {
             val.try_into().unwrap_or_else(|_| {
                 panic!(
                     "value {} is out of range for type {}",
