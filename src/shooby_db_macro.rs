@@ -1,6 +1,3 @@
-use crate::{utils::*, ShoobyField};
-use std::stringify;
-
 macro_rules! _shooby_static_alloc {
     ($name:ident, String, $default:expr, $range:expr) => {
         static mut $name: [u8; $range] = [0; $range];

@@ -9,6 +9,7 @@ pub(crate) use shooby_field::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(packed)]
+#[allow(dead_code)]
 struct A {
     a: u32,
     b: u32,
@@ -35,7 +36,7 @@ mod tests {
     fn it_works() {
 
         create_db_instance!();
-        let mut db = TESTER::DB::take();
+        let db = TESTER::DB::take();
             let reader = db.reader();
             assert_eq!(reader[TESTER::ID::NUM].get_number(), 15);
             assert_eq!(reader[TESTER::ID::STRING].get_string(), "default");
