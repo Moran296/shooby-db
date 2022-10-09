@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::errors::ShoobyError;
 use crate::utils::*;
 
 #[derive(Debug)]
@@ -41,19 +42,17 @@ impl ShoobyField {
     }
 
     //======================SETTERS======================
-    pub fn set_int<T: TryInto<i32>>(&mut self, new_val: T) -> i32 {
-        let value: i32 = new_val.try_into().unwrap_or_else(|_| {
-                panic!(
-                    "value is out of range for type {}",
-                    std::any::type_name::<T>()
-                )
-            });
+    pub fn set_int<T: TryInto<i32>>(&mut self, new_val: T) -> Result<i32, ShoobyError> {
+        let value: i32 = new_val
+            .try_into()
+            .map_err(|_| ShoobyError::InvalidTypeConversion)?;
+
         if let ShoobyFieldType::Int(ref mut data) = self.data {
             let old_value = *data;
             if let Some((min, max)) = self.range {
                 if value < min || value > max {
                     println!("value {} is out of bounds range {} - {}", value, min, max);
-                    return old_value;
+                    return Err(ShoobyError::OutOfBounds);
                 }
             }
 
@@ -61,39 +60,47 @@ impl ShoobyField {
                 *data = value;
                 self.has_changed = true;
             }
-            old_value
+
+            Ok(old_value)
         } else {
-            panic!("{} type is not int!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn set_bool(&mut self, new_val: bool) -> bool {
+    pub fn set_bool(&mut self, new_val: bool) -> Result<bool, ShoobyError> {
         if let ShoobyFieldType::Bool(ref mut data) = self.data {
             let old_value = *data;
             if *data != new_val {
                 *data = new_val;
                 self.has_changed = true;
             }
-            old_value
+            Ok(old_value)
         } else {
-            panic!("{} type is not bool!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn set_string(&mut self, new_str: &str) {
+    pub fn set_string(&mut self, new_str: &str) -> Result<(), ShoobyError> {
         if let ShoobyFieldType::String(ref mut data) = self.data {
-            assert!(data.len() >= new_str.len());
-            if *data != new_str.as_bytes() {
+            if data.len() < new_str.len() {
+                return Err(ShoobyError::OutOfBounds);
+            }
+
+            let old_str =
+                str_from_u8_nul_utf8(data).unwrap_or_else(|_| panic!("Invalid UTF-8 as string"));
+
+            if old_str != new_str {
                 data[0..new_str.len()].copy_from_slice(new_str.as_bytes());
                 data[new_str.len()..].fill(0);
                 self.has_changed = true;
             }
+            Ok(())
         } else {
-            panic!("{} type is not string!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn set_blob<T: Sized>(&mut self, new_blob: &T) {
+    pub fn set_blob<T: Sized>(&mut self, new_blob: &T) -> Result<(), ShoobyError> {
         if let ShoobyFieldType::Blob(ref mut data) = self.data {
             assert!(data.len() == std::mem::size_of::<T>());
             let new_blob_slice = unsafe { any_as_u8_slice(new_blob) };
@@ -101,50 +108,46 @@ impl ShoobyField {
                 data.copy_from_slice(new_blob_slice);
                 self.has_changed = true;
             }
+
+            Ok(())
         } else {
-            panic!("{} type is not blob!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
     // ===================GETTERS==================
 
-    pub fn get_int<T: TryFrom<i32>>(&self) -> T {
+    pub fn get_int<T: TryFrom<i32>>(&self) -> Result<T, ShoobyError> {
         if let ShoobyFieldType::Int(val) = self.data {
-            val.try_into().unwrap_or_else(|_| {
-                panic!(
-                    "value {} is out of range for type {}",
-                    val,
-                    std::any::type_name::<T>()
-                )
-            })
+            val.try_into()
+                .map_err(|_| ShoobyError::InvalidTypeConversion)
         } else {
-            panic!("{} type is not int!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn get_bool(&self) -> bool {
+    pub fn get_bool(&self) -> Result<bool, ShoobyError> {
         if let ShoobyFieldType::Bool(val) = self.data {
-            val
+            Ok(val)
         } else {
-            panic!("{} type is not bool!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn get_string(&self) -> &str {
+    pub fn get_string(&self) -> Result<&str, ShoobyError> {
         if let ShoobyFieldType::String(ref data) = self.data {
-            //TODO: return error if invalid string
-            str_from_u8_nul_utf8(data).unwrap()
+            str_from_u8_nul_utf8(data).map_err(|_| ShoobyError::InvalidTypeConversion)
         } else {
-            panic!("{} type is not string!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 
-    pub fn get_blob<T: Sized>(&self) -> &T {
+    pub fn get_blob<T: Sized>(&self) -> Result<&T, ShoobyError> {
         if let ShoobyFieldType::Blob(ref data) = self.data {
             assert!(data.len() == std::mem::size_of::<T>());
-            unsafe { u8_slice_as_any(data) }
+            Ok(unsafe { u8_slice_as_any(data) })
         } else {
-            panic!("{} type is not blob!", self.name);
+            Err(ShoobyError::InvalidType)
         }
     }
 }

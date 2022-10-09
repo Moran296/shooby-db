@@ -36,11 +36,11 @@ mod tests {
         create_db_instance!(TESTER);
         let db = TESTER::DB::take();
         let reader = db.reader();
-        assert_eq!(reader[TESTER::ID::NUM].get_int::<f64>(), 15.0);
-        assert_eq!(reader[TESTER::ID::STRING].get_string(), "default");
-        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), false);
-        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 5);
-        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().b, 9);
+        assert_eq!(reader[TESTER::ID::NUM].get_int::<f64>().unwrap(), 15.0);
+        assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "default");
+        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool().unwrap(), false);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().a, 5);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().b, 9);
     }
 
     #[test]
@@ -49,19 +49,17 @@ mod tests {
         let mut db = TESTER::DB::take();
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM].set_int::<i8>(17i8);
-            writer[TESTER::ID::STRING].set_string("I LOVE JENNY");
-            writer[TESTER::ID::BOOLEAN].set_bool(true);
-            writer[TESTER::ID::BLOB].set_blob(&A { a: 80, b: 90 });
+            assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
+            assert_eq!(writer[TESTER::ID::BOOLEAN].set_bool(true).unwrap(), false);
+            writer[TESTER::ID::STRING].set_string("I LOVE JENNY").unwrap();
+            writer[TESTER::ID::BLOB].set_blob(&A { a: 80, b: 90 }).unwrap();
         });
 
         let reader = db.reader();
-
-        let g: i8 = reader[TESTER::ID::NUM].get_int();
-        assert_eq!(reader[TESTER::ID::NUM].get_int::<i8>(), 17);
-        assert_eq!(reader[TESTER::ID::STRING].get_string(), "I LOVE JENNY");
-        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), true);
-        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 80);
-        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().b, 90);
+        assert_eq!(reader[TESTER::ID::NUM].get_int::<i8>().unwrap(), 17);
+        assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "I LOVE JENNY");
+        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool().unwrap(), true);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().a, 80);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().b, 90);
     }
 }
