@@ -6,6 +6,7 @@ use crate::utils::*;
 pub(crate) enum ShoobyFieldType<'a> {
     Bool(bool),
     Int(i32),
+    UInt(u32),
     String(&'a mut [u8]),
     Blob(&'a mut [u8]),
 }
@@ -41,11 +42,31 @@ impl ShoobyField {
     }
 
     //======================SETTERS======================
-    pub fn set_number(&mut self, new_val: i32) -> i32 {
+    pub fn set_int(&mut self, new_val: i32) -> i32 {
         if let ShoobyFieldType::Int(ref mut data) = self.data {
             let old_value = *data;
             if let Some((min, max)) = self.range {
                 if new_val < min || new_val > max {
+                    println!("value {} is out of range {} - {}", new_val, min, max);
+                    return old_value;
+                }
+            }
+
+            if *data != new_val {
+                *data = new_val;
+                self.has_changed = true;
+            }
+            old_value
+        } else {
+            panic!("{} type is not int!", self.name);
+        }
+    }
+
+    pub fn set_uint(&mut self, new_val: u32) -> u32 {
+        if let ShoobyFieldType::UInt(ref mut data) = self.data {
+            let old_value = *data;
+            if let Some((min, max)) = self.range {
+                if new_val < min as u32 || new_val > max as u32 {
                     println!("value {} is out of range {} - {}", new_val, min, max);
                     return old_value;
                 }
@@ -102,8 +123,16 @@ impl ShoobyField {
 
     // ===================GETTERS==================
 
-    pub fn get_number(&self) -> i32 {
+    pub fn get_int(&self) -> i32 {
         if let ShoobyFieldType::Int(val) = self.data {
+            val
+        } else {
+            panic!("{} type is not int!", self.name);
+        }
+    }
+
+    pub fn get_uint(&self) -> u32 {
+        if let ShoobyFieldType::UInt(val) = self.data {
             val
         } else {
             panic!("{} type is not int!", self.name);

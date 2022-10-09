@@ -46,7 +46,10 @@ macro_rules! _shooby_assign_value {
         $name.set_bool($value);
     };
     ($name:ident, Int, $value:expr, $range:expr) => {
-        $name.set_number($value);
+        $name.set_int($value);
+    };
+    ($name:ident, UInt, $value:expr, $range:expr) => {
+        $name.set_uint($value);
     };
     ($name:ident, String, $value:expr, $range:expr) => {
         $name.set_string($value);
