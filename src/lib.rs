@@ -37,8 +37,8 @@ mod tests {
         create_db_instance!(TESTER);
         let db = TESTER::DB::take();
         let reader = db.reader();
-        assert_eq!(reader[TESTER::ID::NUM].get_int(), 15);
-        assert_eq!(reader[TESTER::ID::NUM_2].get_uint(), 40);
+        assert_eq!(reader[TESTER::ID::NUM].get_int::<f64>(), 15.0);
+        assert_eq!(reader[TESTER::ID::NUM_2].get_uint::<u32>(), 40);
         assert_eq!(reader[TESTER::ID::STRING].get_string(), "default");
         assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), false);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 5);
@@ -51,16 +51,18 @@ mod tests {
         let mut db = TESTER::DB::take();
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM].set_int(17);
-            writer[TESTER::ID::NUM_2].set_uint(17);
+            writer[TESTER::ID::NUM].set_int::<i8>(17i8);
+            writer[TESTER::ID::NUM_2].set_uint(17u32);
             writer[TESTER::ID::STRING].set_string("I LOVE JENNY");
             writer[TESTER::ID::BOOLEAN].set_bool(true);
             writer[TESTER::ID::BLOB].set_blob(&A { a: 80, b: 90 });
         });
 
         let reader = db.reader();
-        assert_eq!(reader[TESTER::ID::NUM].get_int(), 17);
-        assert_eq!(reader[TESTER::ID::NUM_2].get_uint(), 17);
+
+        let g: i8 = reader[TESTER::ID::NUM].get_int();
+        assert_eq!(reader[TESTER::ID::NUM].get_int::<i8>(), 17);
+        assert_eq!(reader[TESTER::ID::NUM_2].get_uint::<u32>(), 17);
         assert_eq!(reader[TESTER::ID::STRING].get_string(), "I LOVE JENNY");
         assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool(), true);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().a, 80);
