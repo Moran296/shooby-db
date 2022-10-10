@@ -61,7 +61,7 @@ Please note that this is the start, the work is in progress and API will change!
 
 ### PLANS
   - [ ] add persistency trait
-  - [ ] add subscriber/observer trait
+  - [x] add subscriber/observer trait
   - [ ] call persistency and observers upon writes
   - [ ] factory reset (including in persistency)
   - [ ] add more types

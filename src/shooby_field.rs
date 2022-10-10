@@ -36,11 +36,11 @@ pub struct ShoobyField<ID> {
     id: ID,
     data: ShoobyFieldType<'static>,
     range: Option<(i32, i32)>,
-    persistent: bool,
-    has_changed: bool,
+    pub (crate) persistent: bool,
+    pub (crate) has_changed: bool,
 }
 
-impl<ID: AsRef<str>> ShoobyField<ID> {
+impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
     pub(crate) const fn new(
         id: ID,
         data: ShoobyFieldType<'static>,
@@ -58,8 +58,8 @@ impl<ID: AsRef<str>> ShoobyField<ID> {
 
     // ===================GETTERS==================
 
-    pub fn get_id(&self) -> &ID {
-        &self.id
+    pub fn id(&self) -> ID {
+        self.id
     }
 
     pub fn name(&self) -> &str {

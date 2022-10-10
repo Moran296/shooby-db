@@ -72,6 +72,7 @@ macro_rules! shooby_db {
 
             // =============== CONFIGURATION ID ====================================
             // This is the ID of the configuration to index the db by
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
             pub enum ID {
                 $($name,)*
                 FIELD_NUM
@@ -122,14 +123,15 @@ macro_rules! shooby_db {
 
             // ================= CONFIGURATION DB =================
 
-            pub struct DB {
+            pub struct DB<'a> {
                 items: &'static mut [ShoobyField<ID>],
+                observer: Option<&'a dyn ShoobyObserver<ID = ID>>,
                 // RWLock for the array / wrapper of the array
                 // observer manager
                 // persistent storage
             }
 
-            impl DB {
+            impl<'a> DB<'a> {
                 pub (crate) fn take(/*TODO: reset or load from memory*/) -> Self {
 
                     // make sure we call this function only one time!
@@ -149,10 +151,15 @@ macro_rules! shooby_db {
 
                     let mut s = Self {
                         items: unsafe { ITEMS },
+                        observer: None,
                     };
 
                     s.reset_to_default();
                     s
+                }
+
+                pub fn set_observer(&mut self, observer: &'a dyn ShoobyObserver<ID = ID>) {
+                    self.observer = Some(observer);
                 }
 
                 pub (crate) fn reset_to_default(&mut self) {
@@ -168,15 +175,27 @@ macro_rules! shooby_db {
 
                 //TODO, give this in a RWlock as reader... maybe a wrapper for the array?
 
-                pub fn reader<'a>(&'a self) -> &'a [ShoobyField<ID>] {
+                pub fn reader(&'a self) -> &'a [ShoobyField<ID>] {
                     self.items
                 }
 
                 pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField<ID>]) {
                     // TODO writer lock
-                    f(self.items)
+                    f(self.items);
                     // TODO write to persistent storage
                     // TODO release the lock and update observers
+                    self.update_observers();
+                }
+
+                fn update_observers(&mut self) {
+                    if let Some(observer) = self.observer {
+                        for item in self.items.as_mut() {
+                            if (item.has_changed) {
+                                observer.update(item);
+                                item.has_changed = false;
+                            }
+                        }
+                    }
                 }
 
             }

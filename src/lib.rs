@@ -1,11 +1,14 @@
 pub mod errors;
 pub mod shooby_field;
+pub mod traits;
 mod utils;
 
 #[macro_use]
 mod shooby_db_macro;
 
 pub(crate) use shooby_field::*;
+
+pub use traits::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(packed)]
@@ -81,6 +84,36 @@ mod tests {
         assert_eq!(db.reader()[TESTER::ID::STRING].name(), "TESTER::ID::STRING");
         assert_eq!(db.reader()[TESTER::ID::BOOLEAN].name(), "TESTER::ID::BOOLEAN");
 
+    }
+
+    #[test]
+    fn observer() {
+        use core::cell::Cell;
+        struct TestObserver {
+            num_changed: Cell<bool>,
+        }
+
+        create_db_instance!(TESTER);
+        let mut db = TESTER::DB::take();
+
+        impl ShoobyObserver for TestObserver {
+            type ID = TESTER::ID;
+            fn update(&self, field: &ShoobyField<Self::ID>) {
+                if field.id() == TESTER::ID::NUM {
+                    self.num_changed.set(true);
+                }
+            }
+        }
+
+
+        let observer = TestObserver { num_changed: Cell::new(false) };
+        db.set_observer(&observer);
+
+        db.write_with(|writer| {
+            writer[TESTER::ID::NUM].set_int(90).unwrap();
+        });
+
+        assert_eq!(observer.num_changed.get(), true);
     }
     
 }
