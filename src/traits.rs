@@ -1,4 +1,5 @@
-use crate::ShoobyField;
+use crate::{errors::ShoobyError, ShoobyField};
+use std::fmt::Debug;
 
 pub trait ShoobyObserver {
     type ID;
@@ -6,8 +7,10 @@ pub trait ShoobyObserver {
     fn update(&self, field: &ShoobyField<Self::ID>);
 }
 
-// pub trait Oberved {
-//     type ID;
+pub trait ShoobyStorage {
+    type ID;
+    // TODO: add a generic way to give errors..
 
-//     fn add_observer(&mut self, observer: &dyn Observer<ID = Self::ID>);
-// }
+    fn save_raw(&self, id: Self::ID, data: &[u8]) -> Result<(), ShoobyError>;
+    fn load_raw(&mut self, id: Self::ID, data: &mut [u8]) -> Result<bool, ShoobyError>;
+}

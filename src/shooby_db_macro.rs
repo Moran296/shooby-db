@@ -126,6 +126,7 @@ macro_rules! shooby_db {
             pub struct DB<'a> {
                 items: &'static mut [ShoobyField<ID>],
                 observer: Option<&'a dyn ShoobyObserver<ID = ID>>,
+                storage: Option<&'a mut dyn ShoobyStorage<ID = ID>>,
                 // RWLock for the array / wrapper of the array
                 // observer manager
                 // persistent storage
@@ -152,6 +153,7 @@ macro_rules! shooby_db {
                     let mut s = Self {
                         items: unsafe { ITEMS },
                         observer: None,
+                        storage: None,
                     };
 
                     s.reset_to_default();
@@ -160,6 +162,9 @@ macro_rules! shooby_db {
 
                 pub fn set_observer(&mut self, observer: &'a dyn ShoobyObserver<ID = ID>) {
                     self.observer = Some(observer);
+                }
+                pub fn set_storage(&mut self, storage: &'a mut dyn ShoobyStorage<ID = ID>) {
+                    self.storage = Some(storage);
                 }
 
                 pub (crate) fn reset_to_default(&mut self) {
@@ -180,10 +185,8 @@ macro_rules! shooby_db {
                 }
 
                 pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField<ID>]) {
-                    // TODO writer lock
                     f(self.items);
-                    // TODO write to persistent storage
-                    // TODO release the lock and update observers
+                    self.save_to_storage();
                     self.update_observers();
                 }
 
@@ -196,6 +199,30 @@ macro_rules! shooby_db {
                             }
                         }
                     }
+                }
+
+                fn load_from_storage(&mut self) -> Result<bool, ShoobyError> {
+                    let mut loaded = false;
+
+                    if let Some(ref mut storage) = self.storage {
+                        for item in self.items.as_mut() {
+                            loaded &= item.load(*storage)?;
+                        }
+                    }
+
+                    Ok(loaded)
+                }
+
+                fn save_to_storage(&self) -> Result<(), ShoobyError> {
+                    if let Some(ref storage) = self.storage {
+                        for item in self.items.as_ref() {
+                            if (item.has_changed) {
+                                item.save(*storage)?;
+                            }
+                        }
+                    }
+
+                    Ok(())
                 }
 
             }

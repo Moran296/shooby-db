@@ -9,6 +9,7 @@ mod shooby_db_macro;
 pub(crate) use shooby_field::*;
 
 pub use traits::*;
+pub use errors::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(packed)]
@@ -82,8 +83,10 @@ mod tests {
         assert_eq!(db.reader()[TESTER::ID::NUM].name(), "TESTER::ID::NUM");
         assert_eq!(db.reader()[TESTER::ID::BLOB].name(), "TESTER::ID::BLOB");
         assert_eq!(db.reader()[TESTER::ID::STRING].name(), "TESTER::ID::STRING");
-        assert_eq!(db.reader()[TESTER::ID::BOOLEAN].name(), "TESTER::ID::BOOLEAN");
-
+        assert_eq!(
+            db.reader()[TESTER::ID::BOOLEAN].name(),
+            "TESTER::ID::BOOLEAN"
+        );
     }
 
     #[test]
@@ -105,8 +108,9 @@ mod tests {
             }
         }
 
-
-        let observer = TestObserver { num_changed: Cell::new(false) };
+        let observer = TestObserver {
+            num_changed: Cell::new(false),
+        };
         db.set_observer(&observer);
 
         db.write_with(|writer| {
@@ -115,5 +119,4 @@ mod tests {
 
         assert_eq!(observer.num_changed.get(), true);
     }
-    
 }

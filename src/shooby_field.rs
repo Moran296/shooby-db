@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use crate::errors::ShoobyError;
 use crate::utils::*;
+use crate::{errors::ShoobyError, ShoobyStorage};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
@@ -36,8 +36,8 @@ pub struct ShoobyField<ID> {
     id: ID,
     data: ShoobyFieldType,
     range: Option<(i32, i32)>,
-    pub (crate) persistent: bool,
-    pub (crate) has_changed: bool,
+    pub(crate) persistent: bool,
+    pub(crate) has_changed: bool,
 }
 
 impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
@@ -172,5 +172,62 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
         } else {
             Err(ShoobyError::InvalidType)
         }
+    }
+
+    //===============================PERSISTENCE===============================
+
+    pub(crate) fn save<Storage: ShoobyStorage<ID = ID> + ?Sized>(&self, storage: &Storage) -> Result<(), ShoobyError> {
+        if !self.persistent {
+            return Ok(());
+        }
+
+        let data = match &self.data {
+            ShoobyFieldType::Int(ref val) => unsafe { any_as_u8_slice(val) },
+            ShoobyFieldType::Bool(ref val) => unsafe { any_as_u8_slice(val)},
+            ShoobyFieldType::String(data) => data,
+            ShoobyFieldType::Blob(data) => data,
+        };
+
+        storage.save_raw(self.id, data)
+    }
+
+    pub(crate) fn load<Storage: ShoobyStorage<ID = ID> + ?Sized>(&mut self, storage: &mut Storage) -> Result<bool, ShoobyError> {
+        if !self.persistent {
+            return Ok(false);
+        }
+
+        let res = match &mut self.data {
+            ShoobyFieldType::Int(ref mut val) => {
+                let mut data = [0; std::mem::size_of::<i32>()];
+                let loaded = storage.load_raw(self.id, &mut data)?;
+                if loaded {
+                    *val = unsafe { *u8_slice_as_any(&data) };
+                    true
+                } else {
+                    false
+                }
+            },
+            ShoobyFieldType::Bool(ref mut val) => {
+                let mut data = [0; std::mem::size_of::<bool>()];
+                let loaded = storage.load_raw(self.id, &mut data)?;
+                if loaded {
+                    *val = unsafe { *u8_slice_as_any(&data) };
+                    true
+                } else {
+                    false
+                }
+            }
+            ShoobyFieldType::String(data) | ShoobyFieldType::Blob(data)  => {
+                let loaded = storage.load_raw(self.id, *data)?;
+                if loaded {
+                    true
+                } else {
+                    false
+                }
+            }
+
+        };
+
+        Ok(res)
     }
 }
