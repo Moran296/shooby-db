@@ -60,9 +60,9 @@ This created the next table
 Please note that this is the start, the work is in progress and API will change!
 
 ### PLANS
-  - [ ] add persistency trait
+  - [x] add persistency trait
   - [x] add subscriber/observer trait
-  - [ ] call persistency and observers upon writes
+  - [x] call persistency and observers upon writes
   - [ ] factory reset (including in persistency)
   - [ ] add more types
   - [ ] add thread safety

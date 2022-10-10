@@ -176,14 +176,17 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
 
     //===============================PERSISTENCE===============================
 
-    pub(crate) fn save<Storage: ShoobyStorage<ID = ID> + ?Sized>(&self, storage: &Storage) -> Result<(), ShoobyError> {
+    pub(crate) fn save<Storage: ShoobyStorage<ID = ID> + ?Sized>(
+        &self,
+        storage: &Storage,
+    ) -> Result<(), ShoobyError> {
         if !self.persistent {
             return Ok(());
         }
 
         let data = match &self.data {
             ShoobyFieldType::Int(ref val) => unsafe { any_as_u8_slice(val) },
-            ShoobyFieldType::Bool(ref val) => unsafe { any_as_u8_slice(val)},
+            ShoobyFieldType::Bool(ref val) => unsafe { any_as_u8_slice(val) },
             ShoobyFieldType::String(data) => data,
             ShoobyFieldType::Blob(data) => data,
         };
@@ -191,7 +194,10 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
         storage.save_raw(self.id, data)
     }
 
-    pub(crate) fn load<Storage: ShoobyStorage<ID = ID> + ?Sized>(&mut self, storage: &mut Storage) -> Result<bool, ShoobyError> {
+    pub(crate) fn load<Storage: ShoobyStorage<ID = ID> + ?Sized>(
+        &mut self,
+        storage: &mut Storage,
+    ) -> Result<bool, ShoobyError> {
         if !self.persistent {
             return Ok(false);
         }
@@ -206,7 +212,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
                 } else {
                     false
                 }
-            },
+            }
             ShoobyFieldType::Bool(ref mut val) => {
                 let mut data = [0; std::mem::size_of::<bool>()];
                 let loaded = storage.load_raw(self.id, &mut data)?;
@@ -217,7 +223,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
                     false
                 }
             }
-            ShoobyFieldType::String(data) | ShoobyFieldType::Blob(data)  => {
+            ShoobyFieldType::String(data) | ShoobyFieldType::Blob(data) => {
                 let loaded = storage.load_raw(self.id, *data)?;
                 if loaded {
                     true
@@ -225,7 +231,6 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
                     false
                 }
             }
-
         };
 
         Ok(res)

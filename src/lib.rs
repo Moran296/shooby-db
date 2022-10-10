@@ -8,8 +8,8 @@ mod shooby_db_macro;
 
 pub(crate) use shooby_field::*;
 
-pub use traits::*;
 pub use errors::*;
+pub use traits::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(packed)]
