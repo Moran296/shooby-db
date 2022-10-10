@@ -5,14 +5,14 @@ use crate::utils::*;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
-pub(crate) enum ShoobyFieldType<'a> {
+pub(crate) enum ShoobyFieldType {
     Bool(bool),
     Int(i32),
-    String(&'a mut [u8]),
-    Blob(&'a mut [u8]),
+    String(&'static mut [u8]),
+    Blob(&'static mut [u8]),
 }
 
-impl Display for ShoobyFieldType<'_> {
+impl Display for ShoobyFieldType {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
             ShoobyFieldType::Bool(data) => write!(f, "Bool({})", data),
@@ -34,7 +34,7 @@ pub const NON_PERSISTENT: bool = false;
 #[derive(Debug)]
 pub struct ShoobyField<ID> {
     id: ID,
-    data: ShoobyFieldType<'static>,
+    data: ShoobyFieldType,
     range: Option<(i32, i32)>,
     pub (crate) persistent: bool,
     pub (crate) has_changed: bool,
@@ -43,7 +43,7 @@ pub struct ShoobyField<ID> {
 impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
     pub(crate) const fn new(
         id: ID,
-        data: ShoobyFieldType<'static>,
+        data: ShoobyFieldType,
         range: Option<(i32, i32)>,
         persistent: bool,
     ) -> Self {
