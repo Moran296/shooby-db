@@ -43,16 +43,16 @@ macro_rules! _shooby_create_cfgs {
 
 macro_rules! _shooby_assign_value {
     ($name:ident, Bool, $value:expr, $range:expr) => {
-        $name.set_bool($value);
+        $name.set_bool($value).unwrap();
     };
     ($name:ident, Int, $value:expr, $range:expr) => {
-        $name.set_int::<i32>($value);
+        $name.set_int($value).unwrap();
     };
     ($name:ident, String, $value:expr, $range:expr) => {
-        $name.set_string($value);
+        $name.set_string($value).unwrap();
     };
     ($name:ident, Blob, $value:expr, $range:expr) => {
-        $name.set_blob(&$value);
+        $name.set_blob(&$value).unwrap();
     };
 }
 

@@ -41,6 +41,42 @@ impl ShoobyField {
         }
     }
 
+    // ===================GETTERS==================
+
+    pub fn get_int<T: TryFrom<i32>>(&self) -> Result<T, ShoobyError> {
+        if let ShoobyFieldType::Int(val) = self.data {
+            val.try_into()
+                .map_err(|_| ShoobyError::InvalidTypeConversion)
+        } else {
+            Err(ShoobyError::InvalidType)
+        }
+    }
+
+    pub fn get_bool(&self) -> Result<bool, ShoobyError> {
+        if let ShoobyFieldType::Bool(val) = self.data {
+            Ok(val)
+        } else {
+            Err(ShoobyError::InvalidType)
+        }
+    }
+
+    pub fn get_string(&self) -> Result<&str, ShoobyError> {
+        if let ShoobyFieldType::String(ref data) = self.data {
+            str_from_u8_nul_utf8(data).map_err(|_| ShoobyError::InvalidTypeConversion)
+        } else {
+            Err(ShoobyError::InvalidType)
+        }
+    }
+
+    pub fn get_blob<T: Sized>(&self) -> Result<&T, ShoobyError> {
+        if let ShoobyFieldType::Blob(ref data) = self.data {
+            assert!(data.len() == std::mem::size_of::<T>());
+            Ok(unsafe { u8_slice_as_any(data) })
+        } else {
+            Err(ShoobyError::InvalidType)
+        }
+    }
+
     //======================SETTERS======================
     pub fn set_int<T: TryInto<i32>>(&mut self, new_val: T) -> Result<i32, ShoobyError> {
         let value: i32 = new_val
@@ -115,39 +151,4 @@ impl ShoobyField {
         }
     }
 
-    // ===================GETTERS==================
-
-    pub fn get_int<T: TryFrom<i32>>(&self) -> Result<T, ShoobyError> {
-        if let ShoobyFieldType::Int(val) = self.data {
-            val.try_into()
-                .map_err(|_| ShoobyError::InvalidTypeConversion)
-        } else {
-            Err(ShoobyError::InvalidType)
-        }
-    }
-
-    pub fn get_bool(&self) -> Result<bool, ShoobyError> {
-        if let ShoobyFieldType::Bool(val) = self.data {
-            Ok(val)
-        } else {
-            Err(ShoobyError::InvalidType)
-        }
-    }
-
-    pub fn get_string(&self) -> Result<&str, ShoobyError> {
-        if let ShoobyFieldType::String(ref data) = self.data {
-            str_from_u8_nul_utf8(data).map_err(|_| ShoobyError::InvalidTypeConversion)
-        } else {
-            Err(ShoobyError::InvalidType)
-        }
-    }
-
-    pub fn get_blob<T: Sized>(&self) -> Result<&T, ShoobyError> {
-        if let ShoobyFieldType::Blob(ref data) = self.data {
-            assert!(data.len() == std::mem::size_of::<T>());
-            Ok(unsafe { u8_slice_as_any(data) })
-        } else {
-            Err(ShoobyError::InvalidType)
-        }
-    }
 }
