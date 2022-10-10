@@ -2,6 +2,7 @@
 
 use crate::errors::ShoobyError;
 use crate::utils::*;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
 pub(crate) enum ShoobyFieldType<'a> {
@@ -9,6 +10,20 @@ pub(crate) enum ShoobyFieldType<'a> {
     Int(i32),
     String(&'a mut [u8]),
     Blob(&'a mut [u8]),
+}
+
+impl Display for ShoobyFieldType<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            ShoobyFieldType::Bool(data) => write!(f, "Bool({})", data),
+            ShoobyFieldType::Int(data) => write!(f, "Int({})", data),
+            ShoobyFieldType::Blob(data) => write!(f, "Blob of size: {})", data.len()),
+            ShoobyFieldType::String(data) => match str_from_u8_nul_utf8(data) {
+                Ok(data) => write!(f, "String({})", data),
+                Err(err) => write!(f, "String error({:?})", err),
+            },
+        }
+    }
 }
 
 pub const PERSISTENT: bool = true;
@@ -150,5 +165,4 @@ impl ShoobyField {
             Err(ShoobyError::InvalidType)
         }
     }
-
 }

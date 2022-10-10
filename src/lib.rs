@@ -51,13 +51,20 @@ mod tests {
         db.write_with(|writer| {
             assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
             assert_eq!(writer[TESTER::ID::BOOLEAN].set_bool(true).unwrap(), false);
-            writer[TESTER::ID::STRING].set_string("I LOVE JENNY").unwrap();
-            writer[TESTER::ID::BLOB].set_blob(&A { a: 80, b: 90 }).unwrap();
+            writer[TESTER::ID::STRING]
+                .set_string("I LOVE JENNY")
+                .unwrap();
+            writer[TESTER::ID::BLOB]
+                .set_blob(&A { a: 80, b: 90 })
+                .unwrap();
         });
 
         let reader = db.reader();
         assert_eq!(reader[TESTER::ID::NUM].get_int::<i8>().unwrap(), 17);
-        assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "I LOVE JENNY");
+        assert_eq!(
+            reader[TESTER::ID::STRING].get_string().unwrap(),
+            "I LOVE JENNY"
+        );
         assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool().unwrap(), true);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().a, 80);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().b, 90);
