@@ -68,11 +68,20 @@ macro_rules! shooby_db {
             // TODO: put conditional cfg
             use std::sync::atomic::AtomicBool;
             use std::sync::atomic::Ordering;
+            use std::fmt::{Formatter, Display, Result as FmtResult};
 
             // =============== CONFIGURATION ID ====================================
             // This is the ID of the configuration to index the db by
             pub enum ID {
                 $($name,)*
+            }
+
+            impl Display for ID {
+                fn fmt(&self, f: &mut Formatter) -> FmtResult {
+                    match self {
+                        $(ID::$name => write!(f, stringify!($name)),)*
+                    }
+                }
             }
 
             /* TODO: might this be better to impl for DB instead of the array itself?
