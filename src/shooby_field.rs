@@ -32,23 +32,23 @@ pub const NON_PERSISTENT: bool = false;
 /// ShoobyField
 /// This is the fields that are held for each item in the database
 #[derive(Debug)]
-pub struct ShoobyField {
-    name: &'static str,
+pub struct ShoobyField<ID> {
+    id: ID,
     data: ShoobyFieldType<'static>,
     range: Option<(i32, i32)>,
     persistent: bool,
     has_changed: bool,
 }
 
-impl ShoobyField {
+impl<ID: AsRef<str>> ShoobyField<ID> {
     pub(crate) const fn new(
-        name: &'static str,
+        id: ID,
         data: ShoobyFieldType<'static>,
         range: Option<(i32, i32)>,
         persistent: bool,
     ) -> Self {
         ShoobyField {
-            name,
+            id,
             data,
             range,
             persistent,
@@ -57,6 +57,14 @@ impl ShoobyField {
     }
 
     // ===================GETTERS==================
+
+    pub fn get_id(&self) -> &ID {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        self.id.as_ref()
+    }
 
     pub fn get_int<T: TryFrom<i32>>(&self) -> Result<T, ShoobyError> {
         if let ShoobyFieldType::Int(val) = self.data {

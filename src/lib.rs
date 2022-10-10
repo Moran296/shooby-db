@@ -69,4 +69,18 @@ mod tests {
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().a, 80);
         assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().b, 90);
     }
+
+    #[test]
+    fn name_as_str() {
+        create_db_instance!(TESTER);
+        let db = TESTER::DB::take();
+
+        assert_eq!(db.name(), "TESTER");
+        assert_eq!(db.reader()[TESTER::ID::NUM].name(), "TESTER::ID::NUM");
+        assert_eq!(db.reader()[TESTER::ID::BLOB].name(), "TESTER::ID::BLOB");
+        assert_eq!(db.reader()[TESTER::ID::STRING].name(), "TESTER::ID::STRING");
+        assert_eq!(db.reader()[TESTER::ID::BOOLEAN].name(), "TESTER::ID::BOOLEAN");
+
+    }
+    
 }

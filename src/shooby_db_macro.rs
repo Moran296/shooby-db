@@ -13,7 +13,7 @@ macro_rules! _shooby_static_alloc {
 macro_rules! _shooby_create_cfgs {
     ($name:ident, String, $default:expr, $range:expr, $persistent:path) => {
         ShoobyField::new(
-            stringify!($name),
+            ID::$name,
             // safety: this happens in take function, that can only happen once
             ShoobyFieldType::String(unsafe { &mut $name }),
             None,
@@ -23,7 +23,7 @@ macro_rules! _shooby_create_cfgs {
 
     ($name:ident, Blob, $default:expr, $range:expr, $persistent:path) => {
         ShoobyField::new(
-            stringify!($name),
+            ID::$name,
             // safety: this happens in take function, that can only happen once
             ShoobyFieldType::Blob(unsafe { &mut $name as &mut [u8; $range] }),
             None,
@@ -33,7 +33,7 @@ macro_rules! _shooby_create_cfgs {
 
     ($name:ident, $var:ident, $default:literal, $range:expr, $persistent:path) => {
         ShoobyField::new(
-            stringify!($name),
+            ID::$name,
             ShoobyFieldType::$var($default),
             $range,
             $persistent,
@@ -74,12 +74,27 @@ macro_rules! shooby_db {
             // This is the ID of the configuration to index the db by
             pub enum ID {
                 $($name,)*
+                FIELD_NUM
+            }
+
+            static _ID_AS_STR: [&str; ID::FIELD_NUM as usize] = [
+                $(
+                    concat!(stringify!($DB_NAME), "::ID::", stringify!($name)),
+                )*
+            ];
+
+            impl AsRef<str> for ID {
+                fn as_ref(&self) -> &str {
+                    _ID_AS_STR[*self as usize]
+                }
             }
 
             impl Display for ID {
-                fn fmt(&self, f: &mut Formatter) -> FmtResult {
+                fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+
                     match self {
-                        $(ID::$name => write!(f, stringify!($name)),)*
+                        $(ID::$name => write!(f, "{}", _ID_AS_STR[*self as usize]),)*
+                        ID::FIELD_NUM => write!(f, "FIELD_NUM"),
                     }
                 }
             }
@@ -89,15 +104,15 @@ macro_rules! shooby_db {
 
                I would like to expose reader and writer differently later, and just iterating the inner array is BAD!!
             */
-            impl std::ops::Index <ID> for [ShoobyField] {
-                type Output = ShoobyField;
+            impl std::ops::Index <ID> for [ShoobyField<ID>] {
+                type Output = ShoobyField<ID>;
 
                 fn index(&self, index: ID) -> &Self::Output {
                     & self[index as usize]
                 }
             }
 
-            impl std::ops::IndexMut <ID> for [ShoobyField] {
+            impl std::ops::IndexMut <ID> for [ShoobyField<ID>] {
                 fn index_mut(&mut self, index: ID) -> &mut Self::Output {
                     &mut  self[index as usize ]
                 }
@@ -108,7 +123,7 @@ macro_rules! shooby_db {
             // ================= CONFIGURATION DB =================
 
             pub struct DB {
-                items: &'static mut [ShoobyField],
+                items: &'static mut [ShoobyField<ID>],
                 // RWLock for the array / wrapper of the array
                 // observer manager
                 // persistent storage
@@ -128,7 +143,7 @@ macro_rules! shooby_db {
                     //alloc all static data for strings and blobs
                     $( _shooby_static_alloc!($name, $var, $default, $range); )*
 
-                    static mut ITEMS: &'static mut [ShoobyField] = &mut [
+                    static mut ITEMS: &'static mut [ShoobyField<ID>] = &mut [
                         $(_shooby_create_cfgs!($name, $var, $default, $range, $persistent), ) *
                     ];
 
@@ -147,14 +162,17 @@ macro_rules! shooby_db {
                     )*
                 }
 
+                pub fn name(&self) -> &str {
+                    stringify!($DB_NAME)
+                }
 
                 //TODO, give this in a RWlock as reader... maybe a wrapper for the array?
 
-                pub fn reader<'a>(&'a self) -> &'a [ShoobyField] {
+                pub fn reader<'a>(&'a self) -> &'a [ShoobyField<ID>] {
                     self.items
                 }
 
-                pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField]) {
+                pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField<ID>]) {
                     // TODO writer lock
                     f(self.items)
                     // TODO write to persistent storage
