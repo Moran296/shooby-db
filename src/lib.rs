@@ -1,4 +1,5 @@
 pub mod errors;
+pub mod multi_observers;
 pub mod shooby_field;
 pub mod traits;
 mod utils;
@@ -9,6 +10,7 @@ mod shooby_db_macro;
 pub(crate) use shooby_field::*;
 
 pub use errors::*;
+pub use multi_observers::MultiObserver;
 pub use traits::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -118,5 +120,52 @@ mod tests {
         });
 
         assert_eq!(observer.num_changed.get(), true);
+    }
+
+    #[test]
+    fn multi_observers() {
+        use core::cell::Cell;
+
+        struct TestObserver<'a> {
+            num_changed: &'a Cell<bool>,
+        }
+
+        create_db_instance!(TESTER);
+        let mut db = TESTER::DB::take();
+
+        impl<'a> ShoobyObserver for TestObserver<'a> {
+            type ID = TESTER::ID;
+            fn update(&self, field: &ShoobyField<Self::ID>) {
+                if field.id() == TESTER::ID::NUM {
+                    self.num_changed.set(true);
+                }
+            }
+        }
+
+        let bools: [Cell<bool>; 3] = [Cell::new(false), Cell::new(false), Cell::new(false)];
+        let observer_0 = TestObserver {
+            num_changed: &bools[0],
+        };
+        let observer_1 = TestObserver {
+            num_changed: &bools[1],
+        };
+        let observer_2 = TestObserver {
+            num_changed: &bools[2],
+        };
+
+        let mut multi_observer: MultiObserver<TESTER::ID, TestObserver, 3> = MultiObserver::new();
+        multi_observer.add(observer_0).unwrap();
+        multi_observer.add(observer_1).unwrap();
+        multi_observer.add(observer_2).unwrap();
+
+        db.set_observer(&multi_observer);
+
+        db.write_with(|writer| {
+            writer[TESTER::ID::NUM].set_int(90).unwrap();
+        });
+
+        assert_eq!(bools[0].get(), true);
+        assert_eq!(bools[1].get(), true);
+        assert_eq!(bools[2].get(), true);
     }
 }
