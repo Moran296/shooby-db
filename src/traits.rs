@@ -1,5 +1,4 @@
 use crate::{errors::ShoobyError, ShoobyField};
-use std::fmt::Debug;
 
 pub trait ShoobyObserver {
     type ID;

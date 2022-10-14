@@ -135,6 +135,20 @@ macro_rules! shooby_db {
                 }
             }
 
+            // ================= HELPER FUNCTIONS FOR TAKING DB =================
+            ///helper function for taking DB with empty Storage and Observer. used mostly for testing
+            pub fn take_db_with_empty_observer_and_storage() -> DB<EmptyObserver, EmptyStorage> {
+                DB::take(None, None)
+            }
+            ///helper function for taiking DB with empty Storage. Used if no persistence is required.
+            pub fn take_with_observer_only<T: ShoobyObserver<ID=ID>>(observer: Option<T>) -> DB<T, EmptyStorage> {
+                DB::take(observer, None)
+            }
+            ///helper function for taiking DB with empty observer. Used if not oberserver is required.
+            pub fn take_with_storage_only<T: ShoobyStorage<ID=ID>>(storage: Option<T>) -> DB<EmptyObserver, T> {
+                DB::take(None, storage)
+            }
+
             // ================= CONFIGURATION DB =================
 
 
@@ -147,7 +161,7 @@ macro_rules! shooby_db {
             }
 
             impl<Observer: ShoobyObserver<ID=ID>, Storage: ShoobyStorage<ID=ID>> DB<Observer, Storage> {
-                pub (crate) fn take(observer: Option<Observer>, storage: Option<Storage>) -> Self {
+                pub fn take(observer: Option<Observer>, storage: Option<Storage>) -> Self {
 
                     // make sure we call this function only one time!
                     // TODO: limit the AtomicBool to only if feature std is enabled

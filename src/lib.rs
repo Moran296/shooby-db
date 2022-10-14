@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn it_works() {
         create_db_instance!(TESTER);
-        let db: TESTER::DB = TESTER::DB::take(None, None);
+        let db = TESTER::take_db_with_empty_observer_and_storage();
         let reader = db.reader();
         assert_eq!(reader[TESTER::ID::NUM].get_int::<f64>().unwrap(), 15.0);
         assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "default");
@@ -53,14 +53,14 @@ mod tests {
     #[should_panic]
     fn it_panics() {
         create_db_instance!(TESTER);
-        let db_1: TESTER::DB = TESTER::DB::take(None, None);
-        let db_2: TESTER::DB = TESTER::DB::take(None, None);
+        let db_1 = TESTER::take_db_with_empty_observer_and_storage();
+        let db_2 = TESTER::take_db_with_empty_observer_and_storage();
     }
 
     #[test]
     fn can_be_changed() {
         create_db_instance!(TESTER);
-        let mut db: TESTER::DB = TESTER::DB::take(None, None);
+        let mut db = TESTER::take_db_with_empty_observer_and_storage();
 
         db.write_with(|writer| {
             assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn name_as_str() {
         create_db_instance!(TESTER);
-        let mut db: TESTER::DB = TESTER::DB::take(None, None);
+        let mut db = TESTER::take_db_with_empty_observer_and_storage();
 
         assert_eq!(db.name(), "TESTER");
         assert_eq!(db.reader()[TESTER::ID::NUM].name(), "TESTER::ID::NUM");
@@ -122,8 +122,7 @@ mod tests {
         };
 
         create_db_instance!(TESTER);
-        let mut db: TESTER::DB<TestObserver, TESTER::EmptyStorage> =
-            TESTER::DB::take(Some(observer), None);
+        let mut db: TESTER::DB<TestObserver> = TESTER::take_with_observer_only(Some(observer));
 
         db.write_with(|writer| {
             writer[TESTER::ID::NUM].set_int(90).unwrap();
@@ -166,8 +165,8 @@ mod tests {
         multi_observer.add(observer_2).unwrap();
 
         create_db_instance!(TESTER);
-        let mut db: TESTER::DB<MultiObserver<_, _, 3>, TESTER::EmptyStorage> =
-            TESTER::DB::take(Some(multi_observer), None);
+        let mut db: TESTER::DB<MultiObserver<_, _, 3>> =
+            TESTER::take_with_observer_only(Some(multi_observer));
 
         db.write_with(|writer| {
             writer[TESTER::ID::NUM].set_int(90).unwrap();
