@@ -63,6 +63,7 @@ Please note that this is the start, the work is in progress and API will change!
   - [x] add persistency trait
   - [x] add subscriber/observer trait
   - [x] call persistency and observers upon writes
+  - [ ] use heapless instead of raw byte arrays
   - [ ] factory reset (including in persistency)
   - [ ] add more types
   - [ ] add thread safety
