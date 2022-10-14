@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn it_works() {
         create_db_instance!(TESTER);
-        let db = TESTER::DB::take();
+        let db: TESTER::DB = TESTER::DB::take(None, None);
         let reader = db.reader();
         assert_eq!(reader[TESTER::ID::NUM].get_int::<f64>().unwrap(), 15.0);
         assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "default");
@@ -50,9 +50,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn it_panics() {
+        create_db_instance!(TESTER);
+        let db_1: TESTER::DB = TESTER::DB::take(None, None);
+        let db_2: TESTER::DB = TESTER::DB::take(None, None);
+    }
+
+    #[test]
     fn can_be_changed() {
         create_db_instance!(TESTER);
-        let mut db = TESTER::DB::take();
+        let mut db: TESTER::DB = TESTER::DB::take(None, None);
 
         db.write_with(|writer| {
             assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
@@ -79,7 +87,7 @@ mod tests {
     #[test]
     fn name_as_str() {
         create_db_instance!(TESTER);
-        let db = TESTER::DB::take();
+        let mut db: TESTER::DB = TESTER::DB::take(None, None);
 
         assert_eq!(db.name(), "TESTER");
         assert_eq!(db.reader()[TESTER::ID::NUM].name(), "TESTER::ID::NUM");
@@ -94,14 +102,11 @@ mod tests {
     #[test]
     fn observer() {
         use core::cell::Cell;
-        struct TestObserver {
-            num_changed: Cell<bool>,
+        struct TestObserver<'a> {
+            num_changed: &'a Cell<bool>,
         }
 
-        create_db_instance!(TESTER);
-        let mut db = TESTER::DB::take();
-
-        impl ShoobyObserver for TestObserver {
+        impl<'a> ShoobyObserver for TestObserver<'a> {
             type ID = TESTER::ID;
             fn update(&self, field: &ShoobyField<Self::ID>) {
                 if field.id() == TESTER::ID::NUM {
@@ -110,28 +115,30 @@ mod tests {
             }
         }
 
+        let boolcell = Cell::new(false);
+
         let observer = TestObserver {
-            num_changed: Cell::new(false),
+            num_changed: &boolcell,
         };
-        db.set_observer(&observer);
+
+        create_db_instance!(TESTER);
+        let mut db: TESTER::DB<TestObserver, TESTER::EmptyStorage> =
+            TESTER::DB::take(Some(observer), None);
 
         db.write_with(|writer| {
             writer[TESTER::ID::NUM].set_int(90).unwrap();
         });
 
-        assert_eq!(observer.num_changed.get(), true);
+        assert_eq!(boolcell.get(), true);
     }
 
     #[test]
-    fn multi_observers() {
+    fn multi_observers_before_creating_db() {
         use core::cell::Cell;
 
         struct TestObserver<'a> {
             num_changed: &'a Cell<bool>,
         }
-
-        create_db_instance!(TESTER);
-        let mut db = TESTER::DB::take();
 
         impl<'a> ShoobyObserver for TestObserver<'a> {
             type ID = TESTER::ID;
@@ -158,7 +165,59 @@ mod tests {
         multi_observer.add(observer_1).unwrap();
         multi_observer.add(observer_2).unwrap();
 
-        db.set_observer(&multi_observer);
+        create_db_instance!(TESTER);
+        let mut db: TESTER::DB<MultiObserver<_, _, 3>, TESTER::EmptyStorage> =
+            TESTER::DB::take(Some(multi_observer), None);
+
+        db.write_with(|writer| {
+            writer[TESTER::ID::NUM].set_int(90).unwrap();
+        });
+
+        assert_eq!(bools[0].get(), true);
+        assert_eq!(bools[1].get(), true);
+        assert_eq!(bools[2].get(), true);
+    }
+
+    #[test]
+    fn multi_observers_after_creating_db() {
+        use core::cell::Cell;
+
+        struct TestObserver<'a> {
+            num_changed: &'a Cell<bool>,
+        }
+
+        impl<'a> ShoobyObserver for TestObserver<'a> {
+            type ID = TESTER::ID;
+            fn update(&self, field: &ShoobyField<Self::ID>) {
+                if field.id() == TESTER::ID::NUM {
+                    self.num_changed.set(true);
+                }
+            }
+        }
+
+        let bools: [Cell<bool>; 3] = [Cell::new(false), Cell::new(false), Cell::new(false)];
+        let observer_0 = TestObserver {
+            num_changed: &bools[0],
+        };
+        let observer_1 = TestObserver {
+            num_changed: &bools[1],
+        };
+        let observer_2 = TestObserver {
+            num_changed: &bools[2],
+        };
+
+        let multi_observer: MultiObserver<TESTER::ID, TestObserver, 3> = MultiObserver::new();
+        create_db_instance!(TESTER);
+        let mut db: TESTER::DB<MultiObserver<_, _, 3>, TESTER::EmptyStorage> =
+            TESTER::DB::take(Some(multi_observer), None);
+
+        db.observer(|observer| {
+            if let Some(multi_observer) = observer {
+                multi_observer.add(observer_0).unwrap();
+                multi_observer.add(observer_1).unwrap();
+                multi_observer.add(observer_2).unwrap();
+            }
+        });
 
         db.write_with(|writer| {
             writer[TESTER::ID::NUM].set_int(90).unwrap();

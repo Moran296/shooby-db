@@ -115,17 +115,39 @@ macro_rules! shooby_db {
 
             // ================= CONFIGURATION ID END =================
 
+            // ================= EMPTY STRUCT AS DEFAULTS =================
+
+            pub struct EmptyObserver;
+            impl ShoobyObserver for EmptyObserver {
+                type ID = ID;
+
+                fn update(&self, _field: &ShoobyField<Self::ID>) {}
+            }
+
+            pub struct EmptyStorage;
+            impl ShoobyStorage for EmptyStorage {
+                type ID = ID;
+                fn save_raw(&self, _id: Self::ID, _data: &[u8]) -> Result<(), ShoobyError> {
+                    Ok(())
+                }
+                fn load_raw(&mut self, _id: Self::ID, _data: &mut [u8]) -> Result<bool, ShoobyError> {
+                    Ok(false)
+                }
+            }
+
             // ================= CONFIGURATION DB =================
 
-            pub struct DB<'a> {
+
+
+            pub struct DB<Observer: ShoobyObserver<ID=ID> = EmptyObserver, Storage: ShoobyStorage<ID=ID> = EmptyStorage> {
                 items: &'static mut [ShoobyField<ID>],
-                observer: Option<&'a dyn ShoobyObserver<ID = ID>>,
-                storage: Option<&'a mut dyn ShoobyStorage<ID = ID>>,
+                observer: Option<Observer>,
+                storage: Option<Storage>,
                 // RWLock for the array / wrapper of the array
             }
 
-            impl<'a> DB<'a> {
-                pub (crate) fn take(/*TODO: reset or load from memory as param*/) -> Self {
+            impl<Observer: ShoobyObserver<ID=ID>, Storage: ShoobyStorage<ID=ID>> DB<Observer, Storage> {
+                pub (crate) fn take(observer: Option<Observer>, storage: Option<Storage>) -> Self {
 
                     // make sure we call this function only one time!
                     // TODO: limit the AtomicBool to only if feature std is enabled
@@ -144,19 +166,12 @@ macro_rules! shooby_db {
 
                     let mut s = Self {
                         items: unsafe { ITEMS },
-                        observer: None,
-                        storage: None,
+                        observer,
+                        storage,
                     };
 
                     s.reset_to_default();
                     s
-                }
-
-                pub fn set_observer(&mut self, observer: &'a dyn ShoobyObserver<ID = ID>) {
-                    self.observer = Some(observer);
-                }
-                pub fn set_storage(&mut self, storage: &'a mut dyn ShoobyStorage<ID = ID>) {
-                    self.storage = Some(storage);
                 }
 
                 pub (crate) fn reset_to_default(&mut self) {
@@ -171,18 +186,22 @@ macro_rules! shooby_db {
                 }
 
                 //TODO, give this in a RWlock as reader... maybe a wrapper for the array?
-                pub fn reader(&'a self) -> &'a [ShoobyField<ID>] {
+                pub fn reader(&self) -> &[ShoobyField<ID>] {
                     self.items
                 }
 
                 pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField<ID>]) {
                     f(self.items);
                     self.save_to_storage();
-                    self.update_observers();
+                    self.update_observer();
                 }
 
-                fn update_observers(&mut self) {
-                    if let Some(observer) = self.observer {
+                pub fn observer<F>(&mut self, f: F) where F: FnOnce(Option<&mut Observer>) {
+                    f(self.observer.as_mut());
+                }
+
+                fn update_observer(&mut self) {
+                    if let Some(observer) = self.observer.as_ref() {
                         for item in self.items.as_mut() {
                             if (item.has_changed) {
                                 observer.update(item);
@@ -197,7 +216,7 @@ macro_rules! shooby_db {
 
                     if let Some(storage) = self.storage.as_mut() {
                         for item in self.items.as_mut() {
-                            loaded &= item.load(*storage)?;
+                            loaded &= item.load(storage)?;
                         }
                     }
 
@@ -208,7 +227,7 @@ macro_rules! shooby_db {
                     if let Some(storage) = self.storage.as_ref() {
                         for item in self.items.as_ref() {
                             if (item.has_changed) {
-                                item.save(*storage)?;
+                                item.save(storage)?;
                             }
                         }
                     }
