@@ -65,7 +65,6 @@ macro_rules! shooby_db {
         mod $DB_NAME  {
 
             use super::*;
-            // TODO: put conditional cfg
             use std::sync::atomic::AtomicBool;
             use std::sync::atomic::Ordering;
             use std::fmt::{Formatter, Display, Result as FmtResult};
@@ -100,11 +99,6 @@ macro_rules! shooby_db {
                 }
             }
 
-            /* TODO: might this be better to impl for DB instead of the array itself?
-               Or for the return value for wrapper of reader lock?
-
-               I would like to expose reader and writer differently later, and just iterating the inner array is BAD!!
-            */
             impl std::ops::Index <ID> for [ShoobyField<ID>] {
                 type Output = ShoobyField<ID>;
 
@@ -128,15 +122,13 @@ macro_rules! shooby_db {
                 observer: Option<&'a dyn ShoobyObserver<ID = ID>>,
                 storage: Option<&'a mut dyn ShoobyStorage<ID = ID>>,
                 // RWLock for the array / wrapper of the array
-                // observer manager
-                // persistent storage
             }
 
             impl<'a> DB<'a> {
-                pub (crate) fn take(/*TODO: reset or load from memory*/) -> Self {
+                pub (crate) fn take(/*TODO: reset or load from memory as param*/) -> Self {
 
                     // make sure we call this function only one time!
-                    // TODO: this works only if we have atomic bool, which maybe in no_std is not possible - check it
+                    // TODO: limit the AtomicBool to only if feature std is enabled
                     static TAKEN: AtomicBool = AtomicBool::new(false);
                     let taken = TAKEN.fetch_or(true, Ordering::Relaxed);
                     if taken {
@@ -179,7 +171,6 @@ macro_rules! shooby_db {
                 }
 
                 //TODO, give this in a RWlock as reader... maybe a wrapper for the array?
-
                 pub fn reader(&'a self) -> &'a [ShoobyField<ID>] {
                     self.items
                 }
@@ -204,7 +195,7 @@ macro_rules! shooby_db {
                 fn load_from_storage(&mut self) -> Result<bool, ShoobyError> {
                     let mut loaded = false;
 
-                    if let Some(ref mut storage) = self.storage {
+                    if let Some(storage) = self.storage.as_mut() {
                         for item in self.items.as_mut() {
                             loaded &= item.load(*storage)?;
                         }
@@ -214,7 +205,7 @@ macro_rules! shooby_db {
                 }
 
                 fn save_to_storage(&self) -> Result<(), ShoobyError> {
-                    if let Some(ref storage) = self.storage {
+                    if let Some(storage) = self.storage.as_ref() {
                         for item in self.items.as_ref() {
                             if (item.has_changed) {
                                 item.save(*storage)?;
