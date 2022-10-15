@@ -3,6 +3,7 @@
 use crate::utils::*;
 use crate::{errors::ShoobyError, ShoobyStorage};
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::mem::size_of;
 
 #[derive(Debug)]
 pub(crate) enum ShoobyFieldType {
@@ -93,7 +94,10 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
 
     pub fn get_blob<T: Sized>(&self) -> Result<&T, ShoobyError> {
         if let ShoobyFieldType::Blob(ref data) = self.data {
-            assert!(data.len() == std::mem::size_of::<T>());
+            if data.len() != size_of::<T>() {
+                return Err(ShoobyError::InvalidType);
+            }
+
             Ok(unsafe { u8_slice_as_any(data) })
         } else {
             Err(ShoobyError::InvalidType)
@@ -161,7 +165,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
 
     pub fn set_blob<T: Sized>(&mut self, new_blob: &T) -> Result<(), ShoobyError> {
         if let ShoobyFieldType::Blob(ref mut data) = self.data {
-            assert!(data.len() == std::mem::size_of::<T>());
+            assert!(data.len() == size_of::<T>());
             let new_blob_slice = unsafe { any_as_u8_slice(new_blob) };
             if *data != new_blob_slice {
                 data.copy_from_slice(new_blob_slice);
@@ -204,7 +208,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
 
         let res = match &mut self.data {
             ShoobyFieldType::Int(ref mut val) => {
-                let mut data = [0; std::mem::size_of::<i32>()];
+                let mut data = [0; size_of::<i32>()];
                 let loaded = storage.load_raw(self.id, &mut data)?;
                 if loaded {
                     *val = unsafe { *u8_slice_as_any(&data) };
@@ -214,7 +218,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
                 }
             }
             ShoobyFieldType::Bool(ref mut val) => {
-                let mut data = [0; std::mem::size_of::<bool>()];
+                let mut data = [0; size_of::<bool>()];
                 let loaded = storage.load_raw(self.id, &mut data)?;
                 if loaded {
                     *val = unsafe { *u8_slice_as_any(&data) };
