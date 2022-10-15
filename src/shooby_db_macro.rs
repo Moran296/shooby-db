@@ -151,8 +151,6 @@ macro_rules! shooby_db {
 
             // ================= CONFIGURATION DB =================
 
-
-
             pub struct DB<Observer: ShoobyObserver<ID=ID> = EmptyObserver, Storage: ShoobyStorage<ID=ID> = EmptyStorage> {
                 items: &'static mut [ShoobyField<ID>],
                 observer: Option<Observer>,
@@ -193,6 +191,11 @@ macro_rules! shooby_db {
                         let data = &mut self.items[ID::$name];
                         _shooby_assign_value!(data, $var, $default, $range);
                     )*
+                }
+
+                pub fn factory_reset(&mut self) -> Result<(), ShoobyError> {
+                    self.reset_to_default();
+                    self.save_to_storage()
                 }
 
                 pub fn name(&self) -> &str {

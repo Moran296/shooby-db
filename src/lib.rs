@@ -226,4 +226,31 @@ mod tests {
         assert_eq!(bools[1].get(), true);
         assert_eq!(bools[2].get(), true);
     }
+
+    #[test]
+    fn factory_reset() {
+        create_db_instance!(TESTER);
+        let mut db = TESTER::take_db_with_empty_observer_and_storage();
+
+        //changing all values
+        db.write_with(|writer| {
+            assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
+            assert_eq!(writer[TESTER::ID::BOOLEAN].set_bool(true).unwrap(), false);
+            writer[TESTER::ID::STRING]
+                .set_string("I LOVE JENNY")
+                .unwrap();
+            writer[TESTER::ID::BLOB]
+                .set_blob(&A { a: 80, b: 90 })
+                .unwrap();
+        });
+
+        //perform factory reset and read again all valued
+        db.factory_reset().unwrap();
+        let reader = db.reader();
+        assert_eq!(reader[TESTER::ID::NUM].get_int::<i8>().unwrap(), 15);
+        assert_eq!(reader[TESTER::ID::STRING].get_string().unwrap(), "default");
+        assert_eq!(reader[TESTER::ID::BOOLEAN].get_bool().unwrap(), false);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().a, 5);
+        assert_eq!(reader[TESTER::ID::BLOB].get_blob::<A>().unwrap().b, 9);
+    }
 }
