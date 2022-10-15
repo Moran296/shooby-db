@@ -105,7 +105,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
     }
 
     //======================SETTERS======================
-    pub fn set_int<T: TryInto<i32>>(&mut self, new_val: T) -> Result<i32, ShoobyError> {
+    pub fn set_num<T: TryInto<i32>>(&mut self, new_val: T) -> Result<i32, ShoobyError> {
         let value: i32 = new_val
             .try_into()
             .map_err(|_| ShoobyError::InvalidTypeConversion)?;

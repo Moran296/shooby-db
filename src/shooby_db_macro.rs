@@ -46,7 +46,7 @@ macro_rules! _shooby_assign_value {
         $name.set_bool($value).unwrap();
     };
     ($name:ident, Int, $value:expr, $range:expr) => {
-        $name.set_int($value).unwrap();
+        $name.set_num($value).unwrap();
     };
     ($name:ident, String, $value:expr, $range:expr) => {
         $name.set_string($value).unwrap();
@@ -151,6 +151,8 @@ macro_rules! shooby_db {
 
             // ================= CONFIGURATION DB =================
 
+            /// This is the main struct that holds the database
+            /// A new struct will be generated for call to macro shooby_db!
             pub struct DB<Observer: ShoobyObserver<ID=ID> = EmptyObserver, Storage: ShoobyStorage<ID=ID> = EmptyStorage> {
                 items: &'static mut [ShoobyField<ID>],
                 observer: Option<Observer>,
@@ -159,6 +161,19 @@ macro_rules! shooby_db {
             }
 
             impl<Observer: ShoobyObserver<ID=ID>, Storage: ShoobyStorage<ID=ID>> DB<Observer, Storage> {
+                /// takes the database from the static memory to the DB struct.
+                /// paramters:
+                ///    observer: an optional observer that will be notified on every change
+                ///   storage: an optional storage that will be used to save and load the data to persistent storage
+                /// returns: the DB struct
+                ///
+                /// if the DB is already taken, this function will panic
+                /// if the take is called like this
+                ///     `let db: NAME::FB = NAME::DB::take(None, None)`, the DB will be taken with empty observer and storage
+                /// If one does not need observer or storage, the following functions can be used:
+                ///     `let db: NAME::FB = NAME::take_db_with_empty_observer_and_storage()`
+                ///     `let db: NAME::FB = NAME::take_with_observer_only(Some(observer))`
+                ///    `let db: NAME::FB = NAME::take_with_storage_only(Some(storage))`
                 pub fn take(observer: Option<Observer>, storage: Option<Storage>) -> Self {
 
                     // make sure we call this function only one time!
@@ -172,50 +187,65 @@ macro_rules! shooby_db {
                     //alloc all static data for strings and blobs
                     $( _shooby_static_alloc!($name, $var, $default, $range); )*
 
+                    // creates the array of fields
                     static mut ITEMS: &'static mut [ShoobyField<ID>] = &mut [
                         $(_shooby_create_cfgs!($name, $var, $default, $range, $persistent), ) *
                     ];
 
+                    // creates the DB struct with all data supplied
                     let mut s = Self {
                         items: unsafe { ITEMS },
                         observer,
                         storage,
                     };
 
+                    // reset all fields to default
                     s.reset_to_default();
+
+                    // reset all changed flags for all fields
+                    s.reset_changed_flags();
+
                     s
                 }
 
-                pub (crate) fn reset_to_default(&mut self) {
-                    $(
-                        let data = &mut self.items[ID::$name];
-                        _shooby_assign_value!(data, $var, $default, $range);
-                    )*
-                }
-
+                /// This function reset all values to default and saves them to persistent storage if needed
+                /// The function will NOT notify observer on changes
                 pub fn factory_reset(&mut self) -> Result<(), ShoobyError> {
                     self.reset_to_default();
                     self.save_to_storage()
                 }
 
+                /// Get the DB name as string reference
                 pub fn name(&self) -> &str {
                     stringify!($DB_NAME)
                 }
 
-                //TODO, give this in a RWlock as reader... maybe a wrapper for the array?
+                /// Get the DB array of fields to read from
                 pub fn reader(&self) -> &[ShoobyField<ID>] {
                     self.items
                 }
 
+                /// Get the DB array of fields to write to inside a closure
                 pub fn write_with<F>(&mut self, f: F) where F: FnOnce(&mut [ShoobyField<ID>]) {
                     f(self.items);
                     self.save_to_storage();
                     self.update_observer();
                 }
 
+                /// Perform an operation on the observer object if it exists
                 pub fn observer<F>(&mut self, f: F) where F: FnOnce(Option<&mut Observer>) {
                     f(self.observer.as_mut());
                 }
+
+                //============PRIVATE FUNCTIONS================
+
+                pub fn reset_to_default(&mut self) {
+                    $(
+                        let data = &mut self.items[ID::$name];
+                        _shooby_assign_value!(data, $var, $default, $range);
+                    )*
+                }
+
 
                 fn update_observer(&mut self) {
                     if let Some(observer) = self.observer.as_ref() {
@@ -250,6 +280,12 @@ macro_rules! shooby_db {
                     }
 
                     Ok(())
+                }
+
+                fn reset_changed_flags(&mut self) {
+                    for item in self.items.as_mut() {
+                        item.has_changed = false;
+                    }
                 }
 
             }

@@ -63,7 +63,7 @@ mod tests {
         let mut db = TESTER::take_db_with_empty_observer_and_storage();
 
         db.write_with(|writer| {
-            assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
+            assert_eq!(writer[TESTER::ID::NUM].set_num::<i8>(17i8).unwrap(), 15);
             assert_eq!(writer[TESTER::ID::BOOLEAN].set_bool(true).unwrap(), false);
             writer[TESTER::ID::STRING]
                 .set_string("I LOVE JENNY")
@@ -125,7 +125,7 @@ mod tests {
         let mut db: TESTER::DB<TestObserver> = TESTER::take_with_observer_only(Some(observer));
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM].set_int(90).unwrap();
+            writer[TESTER::ID::NUM].set_num(90).unwrap();
         });
 
         assert_eq!(boolcell.get(), true);
@@ -169,7 +169,7 @@ mod tests {
             TESTER::take_with_observer_only(Some(multi_observer));
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM].set_int(90).unwrap();
+            writer[TESTER::ID::NUM].set_num(90).unwrap();
         });
 
         assert_eq!(bools[0].get(), true);
@@ -219,7 +219,7 @@ mod tests {
         });
 
         db.write_with(|writer| {
-            writer[TESTER::ID::NUM].set_int(90).unwrap();
+            writer[TESTER::ID::NUM].set_num(90).unwrap();
         });
 
         assert_eq!(bools[0].get(), true);
@@ -234,7 +234,7 @@ mod tests {
 
         //changing all values
         db.write_with(|writer| {
-            assert_eq!(writer[TESTER::ID::NUM].set_int::<i8>(17i8).unwrap(), 15);
+            assert_eq!(writer[TESTER::ID::NUM].set_num::<i8>(17i8).unwrap(), 15);
             assert_eq!(writer[TESTER::ID::BOOLEAN].set_bool(true).unwrap(), false);
             writer[TESTER::ID::STRING]
                 .set_string("I LOVE JENNY")
