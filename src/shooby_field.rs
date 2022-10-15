@@ -180,7 +180,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
 
     //===============================PERSISTENCE===============================
 
-    pub(crate) fn save<Storage: ShoobyStorage<ID = ID> + ?Sized>(
+    pub(crate) fn save<Storage: ShoobyStorage<ID = ID>>(
         &self,
         storage: &Storage,
     ) -> Result<(), ShoobyError> {
@@ -198,7 +198,7 @@ impl<ID: AsRef<str> + Copy> ShoobyField<ID> {
         storage.save_raw(self.id, data)
     }
 
-    pub(crate) fn load<Storage: ShoobyStorage<ID = ID> + ?Sized>(
+    pub(crate) fn load<Storage: ShoobyStorage<ID = ID>>(
         &mut self,
         storage: &mut Storage,
     ) -> Result<bool, ShoobyError> {
